@@ -1,5 +1,5 @@
-﻿// ==============================================================================
-// thz-lsp-jvm â€” LSP Server do THZ-LANG (LSP4J)
+// ==============================================================================
+// thz-lsp-jvm — LSP Server do THZ-LANG (LSP4J)
 //
 // Servidor LSP via stdio, alimentado diretamente pelo thz-core-jvm.
 // Substitui o servidor LSP Node.js (vscode-languageserver).
@@ -31,11 +31,11 @@ java {
 dependencies {
     implementation("thz.lang:thz-core:$thzVersion")
 
-    // LSP4J â€” implementaÃ§Ã£o Java do Language Server Protocol
+    // LSP4J — implementação Java do Language Server Protocol
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.21.1")
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.21.1")
 
-    // Gson (usado pelo LSP4J para serializaÃ§Ã£o JSON)
+    // Gson (usado pelo LSP4J para serialização JSON)
     implementation("com.google.code.gson:gson:2.11.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
