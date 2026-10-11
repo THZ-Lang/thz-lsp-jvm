@@ -167,7 +167,8 @@ public class ThzTextDocumentService implements TextDocumentService {
                 "VERSAO_LINGUAGEM", "IDEMPOTENTE", "CHAVE_IDEMPOTENCIA",
                 "SISTEMA", "MODULO", "DOMINIO", "SUBDOMINIO", "CAMADA", "VERSAO", "AUTOR", "RESPONSAVEL",
                 "SLO_LATENCIA_MS", "SLO_LATENCIA_MAXIMA", "CONFORMIDADE", "CRITICIDADE",
-                "IDENTIFICADOR_REGRA", "RASTREIO_REQUISITO", "DESCRICAO"
+                "IDENTIFICADOR_REGRA", "RASTREIO_REQUISITO", "DESCRICAO",
+                "BLOCO_COBOL", "FIM_BLOCO_COBOL", "IMPORTAR_COPYBOOK", "COBOL_BLOCK", "END_COBOL_BLOCK", "IMPORT_COPYBOOK"
         };
 
         for (String kw : keywords) {
