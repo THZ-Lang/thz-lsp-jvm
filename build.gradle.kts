@@ -67,11 +67,20 @@ tasks.register<Copy>("instalarLspJar") {
     rename { "thz-lsp.jar" }
 }
 
+tasks.register<Copy>("instalarLspJarVsCode") {
+    group = "build"
+    description = "Copia o JAR do LSP para server/ da extensão VS Code"
+    from(tasks.shadowJar.flatMap { it.archiveFile })
+    into(rootProject.projectDir.resolve("../thz-vscode/server"))
+    rename { "thz-lsp.jar" }
+}
+
 tasks.shadowJar {
     archiveBaseName.set("thz-lsp")
     archiveClassifier.set("")
     archiveVersion.set(thzVersion)
 
-    finalizedBy("instalarLspJar")
+    finalizedBy("instalarLspJar", "instalarLspJarVsCode")
 }
+
 

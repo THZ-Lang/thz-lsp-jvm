@@ -19,7 +19,7 @@ public class ThzLspTest {
     private List<PublishDiagnosticsParams> diagnosticosPublicados;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         server = new ThzLanguageServerImpl();
         diagnosticosPublicados = new ArrayList<>();
         server.connect(new LanguageClient() {
