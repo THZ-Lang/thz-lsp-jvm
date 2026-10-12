@@ -30,6 +30,7 @@ java {
 
 dependencies {
     implementation("thz.lang:thz-core:$thzVersion")
+    implementation("thz.lang:thz-lang-cobol:$thzVersion")
 
     // LSP4J — implementação Java do Language Server Protocol
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.21.1")
