@@ -5,3 +5,5 @@ plugins {
 rootProject.name = "thz-lsp-jvm"
 
 includeBuild("../thz-core-jvm")
+includeBuild("../thz-lang-cobol")
+
