@@ -30,6 +30,7 @@ java {
 
 dependencies {
     implementation("thz.lang:thz-core:$thzVersion")
+    implementation("thz.lang:thz-lang-cobol:$thzVersion")
 
     // LSP4J — implementação Java do Language Server Protocol
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.21.1")
@@ -66,11 +67,20 @@ tasks.register<Copy>("instalarLspJar") {
     rename { "thz-lsp.jar" }
 }
 
+tasks.register<Copy>("instalarLspJarVsCode") {
+    group = "build"
+    description = "Copia o JAR do LSP para server/ da extensão VS Code"
+    from(tasks.shadowJar.flatMap { it.archiveFile })
+    into(rootProject.projectDir.resolve("../thz-vscode/server"))
+    rename { "thz-lsp.jar" }
+}
+
 tasks.shadowJar {
     archiveBaseName.set("thz-lsp")
     archiveClassifier.set("")
     archiveVersion.set(thzVersion)
 
-    finalizedBy("instalarLspJar")
+    finalizedBy("instalarLspJar", "instalarLspJarVsCode")
 }
+
 

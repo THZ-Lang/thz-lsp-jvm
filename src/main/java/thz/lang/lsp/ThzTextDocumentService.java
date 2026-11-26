@@ -57,9 +57,20 @@ public class ThzTextDocumentService implements TextDocumentService {
 
     // ---- Validação ----
 
+    private boolean isArquivoCobol(String uri) {
+        if (uri == null) return false;
+        String lower = uri.toLowerCase();
+        return lower.endsWith(".cbl") || lower.endsWith(".cob") || lower.endsWith(".cpy");
+    }
+
     private void validar(String uri) {
         String fonte = server.obterDocumento(uri);
         if (fonte == null) return;
+
+        if (isArquivoCobol(uri)) {
+            validarCobol(uri, fonte);
+            return;
+        }
 
         ThzLanguageServerImpl.ResultadoAnalise r = server.analisar(fonte);
         List<Diagnostic> diags = server.paraLspDiagnostics(r.diagnosticos(), fonte);
@@ -100,6 +111,29 @@ public class ThzTextDocumentService implements TextDocumentService {
         server.getClient().publishDiagnostics(params);
     }
 
+    private void validarCobol(String uri, String fonte) {
+        List<Diagnostic> diags = new ArrayList<>();
+        try {
+            if (uri.toLowerCase().endsWith(".cpy")) {
+                thz.cobol.CobolBridge.parseCopybook("COPYBOOK", fonte);
+            } else {
+                thz.cobol.parser.CobolProcedureParser.parseProgram(fonte);
+            }
+        } catch (Exception e) {
+            Diagnostic diag = new Diagnostic();
+            diag.setSeverity(DiagnosticSeverity.Error);
+            diag.setRange(new Range(new Position(0, 0), new Position(0, 1)));
+            diag.setMessage("[THZ-COBOL] " + (e.getMessage() != null ? e.getMessage() : "Erro de sintaxe COBOL"));
+            diag.setSource("thz-cobol");
+            diags.add(diag);
+        }
+
+        PublishDiagnosticsParams params = new PublishDiagnosticsParams();
+        params.setUri(uri);
+        params.setDiagnostics(diags);
+        server.getClient().publishDiagnostics(params);
+    }
+
     // ---- Hover ----
 
     @Override
@@ -107,6 +141,7 @@ public class ThzTextDocumentService implements TextDocumentService {
         String uri = params.getTextDocument().getUri();
         String fonte = server.obterDocumento(uri);
         if (fonte == null) return CompletableFuture.completedFuture(null);
+        if (isArquivoCobol(uri)) return CompletableFuture.completedFuture(null);
 
         int linha = params.getPosition().getLine() + 1;
         int coluna = params.getPosition().getCharacter() + 1;
@@ -167,7 +202,8 @@ public class ThzTextDocumentService implements TextDocumentService {
                 "VERSAO_LINGUAGEM", "IDEMPOTENTE", "CHAVE_IDEMPOTENCIA",
                 "SISTEMA", "MODULO", "DOMINIO", "SUBDOMINIO", "CAMADA", "VERSAO", "AUTOR", "RESPONSAVEL",
                 "SLO_LATENCIA_MS", "SLO_LATENCIA_MAXIMA", "CONFORMIDADE", "CRITICIDADE",
-                "IDENTIFICADOR_REGRA", "RASTREIO_REQUISITO", "DESCRICAO"
+                "IDENTIFICADOR_REGRA", "RASTREIO_REQUISITO", "DESCRICAO",
+                "BLOCO_COBOL", "FIM_BLOCO_COBOL", "IMPORTAR_COPYBOOK", "COBOL_BLOCK", "END_COBOL_BLOCK", "IMPORT_COPYBOOK"
         };
 
         for (String kw : keywords) {
@@ -207,6 +243,33 @@ public class ThzTextDocumentService implements TextDocumentService {
         String fonte = server.obterDocumento(uri);
         if (fonte == null) return CompletableFuture.completedFuture(List.of());
 
+        if (isArquivoCobol(uri)) {
+            try {
+                var prog = thz.cobol.parser.CobolProcedureParser.parseProgram(fonte);
+                List<Either<SymbolInformation, DocumentSymbol>> symbols = new ArrayList<>();
+                DocumentSymbol progSym = new DocumentSymbol();
+                progSym.setName(prog.programId());
+                progSym.setKind(SymbolKind.Package);
+                progSym.setDetail("THZ-COBOL Standalone Program");
+                progSym.setRange(new Range(new Position(0, 0), new Position(0, Math.max(1, prog.programId().length()))));
+                progSym.setSelectionRange(progSym.getRange());
+                symbols.add(Either.forRight(progSym));
+
+                for (var par : prog.paragraphs()) {
+                    DocumentSymbol pSym = new DocumentSymbol();
+                    pSym.setName(par.name());
+                    pSym.setKind(SymbolKind.Method);
+                    pSym.setDetail("Parágrafo COBOL (" + par.statements().size() + " instruções)");
+                    pSym.setRange(new Range(new Position(0, 0), new Position(0, 1)));
+                    pSym.setSelectionRange(pSym.getRange());
+                    symbols.add(Either.forRight(pSym));
+                }
+                return CompletableFuture.completedFuture(symbols);
+            } catch (Exception ignored) {
+                return CompletableFuture.completedFuture(List.of());
+            }
+        }
+
         ThzLanguageServerImpl.ResultadoAnalise r = server.analisar(fonte);
         List<Either<SymbolInformation, DocumentSymbol>> result = new ArrayList<>();
 
@@ -245,7 +308,7 @@ public class ThzTextDocumentService implements TextDocumentService {
     public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
         String uri = params.getTextDocument().getUri();
         String fonte = server.obterDocumento(uri);
-        if (fonte == null) return CompletableFuture.completedFuture(Either.forLeft(List.of()));
+        if (fonte == null || isArquivoCobol(uri)) return CompletableFuture.completedFuture(Either.forLeft(List.of()));
 
         int linha = params.getPosition().getLine() + 1;
         int coluna = params.getPosition().getCharacter() + 1;
@@ -279,7 +342,7 @@ public class ThzTextDocumentService implements TextDocumentService {
     public CompletableFuture<List<? extends TextEdit>> formatting(DocumentFormattingParams params) {
         String uri = params.getTextDocument().getUri();
         String fonte = server.obterDocumento(uri);
-        if (fonte == null) return CompletableFuture.completedFuture(List.of());
+        if (fonte == null || isArquivoCobol(uri)) return CompletableFuture.completedFuture(List.of());
         if (!SintaxeEnxuta.validarIndentacao(fonte).isEmpty()) {
             return CompletableFuture.completedFuture(List.of());
         }

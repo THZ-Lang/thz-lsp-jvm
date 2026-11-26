@@ -19,7 +19,7 @@ public class ThzLspTest {
     private List<PublishDiagnosticsParams> diagnosticosPublicados;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         server = new ThzLanguageServerImpl();
         diagnosticosPublicados = new ArrayList<>();
         server.connect(new LanguageClient() {
@@ -181,5 +181,43 @@ public class ThzLspTest {
         var workspaceEdit = docService.rename(renameParams).get();
         assertNotNull(workspaceEdit);
         assertTrue(workspaceEdit.getChanges().containsKey(uri));
+    }
+
+    @Test
+    @DisplayName("ThzTextDocumentService não deve emitir falsos positivos de dialeto ou indentação para arquivos COBOL (.cbl)")
+    void testValidarArquivoCobolSemFalsosPositivosDialeto() throws Exception {
+        String uri = "file:///c:/exemplos/CALC_JUROS.cbl";
+        String cobolSrc = """
+                   IDENTIFICATION DIVISION.
+                   PROGRAM-ID. CALC-JUROS-ROTINA.
+                   ENVIRONMENT DIVISION.
+                   DATA DIVISION.
+                   WORKING-STORAGE SECTION.
+                   01  DADOS-TRABALHO.
+                       05  WS-CAPITAL          PIC S9(11)V99 COMP-3.
+                       05  WS-TAXA-MENSAL      PIC S9(3)V99 COMP-3.
+                       05  WS-TOTAL-ACUMULADO  PIC S9(11)V99 COMP-3.
+                   PROCEDURE DIVISION.
+                   PROCESSAR-CALCULO.
+                       MOVE 50000.00 TO WS-CAPITAL.
+                       MOVE 1.75 TO WS-TAXA-MENSAL.
+                       COMPUTE WS-TOTAL-ACUMULADO = WS-CAPITAL * (1 + WS-TAXA-MENSAL / 100).
+                       DISPLAY "Calculo Concluido. Total: " WS-TOTAL-ACUMULADO.
+                       GOBACK.
+                   """;
+
+        docService.didOpen(new DidOpenTextDocumentParams(new TextDocumentItem(uri, "thz-cobol", 1, cobolSrc)));
+
+        // Verifica que nenhum diagnóstico de erro foi emitido (sem falso positivo de PROGRAM no dialeto pt-BR)
+        assertFalse(diagnosticosPublicados.isEmpty());
+        PublishDiagnosticsParams params = diagnosticosPublicados.get(diagnosticosPublicados.size() - 1);
+        assertEquals(0, params.getDiagnostics().size(), "Não deve haver diagnósticos de erro em arquivo COBOL válido");
+
+        // Verifica outline / documentSymbol para COBOL
+        var symbols = docService.documentSymbol(new DocumentSymbolParams(new TextDocumentIdentifier(uri))).get();
+        assertNotNull(symbols);
+        assertFalse(symbols.isEmpty());
+        assertTrue(symbols.stream().anyMatch(s -> s.getRight().getName().equals("CALC-JUROS-ROTINA")));
+        assertTrue(symbols.stream().anyMatch(s -> s.getRight().getName().equals("PROCESSAR-CALCULO")));
     }
 }
